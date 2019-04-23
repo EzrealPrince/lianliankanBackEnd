@@ -1,17 +1,25 @@
 const mysql = require('mysql');
-const db = require('../sql/db');
-const pool = mysql.createPool(db);
-function query (sql, val) {
-  return new Promise((resolve, reject) => {
-    pool.getConnection((err, conn) => {
-      err && reject('数据库连接失败')
-      conn.query(sql, val, (err, rows) => {
-        if (err) {
-          reject(err)
-        }
-        resolve(rows)
-         conn.release()
-      })
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: 'shanannan521',
+  database: 'EnglishGame'
+})
+const query = function( sql, values ) {
+  return new Promise(( resolve, reject ) => {
+    pool.getConnection(function(err, connection) {
+      if (err) {
+        reject( err )
+      } else {
+        connection.query(sql, values, ( err, rows) => {
+          if ( err ) {
+            reject( err )
+          } else {
+            resolve( rows )
+          }
+          connection.release()
+        })
+      }
     })
   })
 }
