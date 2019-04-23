@@ -1,4 +1,20 @@
-const query = require('../sql/connPool')
+const mysql = require('mysql');
+const db = require('../sql/db');
+const pool = mysql.createPool(db);
+function query (sql, val) {
+  return new Promise((resolve, reject) => {
+    pool.getConnection((err, conn) => {
+      err && reject('数据库连接失败')
+      conn.query(sql, val, (err, rows) => {
+        if (err) {
+          reject(err)
+        }
+        resolve(rows)
+         conn.release()
+      })
+    })
+  })
+}
 module.exports = {
   userRequest(req, res) {
     const openId = req.body.openId
