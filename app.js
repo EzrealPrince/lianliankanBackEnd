@@ -117,7 +117,7 @@ wss.on('connection',(ws, req) => {
           if(currentRooms[i].roomStatus === 1) {  // 找到一个正在等待的房间
             currentRooms[i].roomAccounts.push(ws)
             console.log('已经准备开始游戏,正在进行发题')
-            let res= {method: 'gameStart', roomId:item.roomId, data: createWords()}
+            let res= {method: 'gameStart', roomId:currentRooms[i].roomId, data: createWords()}
             currentRooms[i].roomAccounts.forEach(ws => ws.send(JSON.stringify(res)))
             findRoomFlag = true
             break
@@ -135,8 +135,10 @@ wss.on('connection',(ws, req) => {
         console.log('正在进行: waitGame')
         break
       case 'killWord':
-        console.log('正在进行: killWord')
-        wss.broadcast(JSON.stringify(res))
+        console.log('正在进行: killWord','当前房间号为:',req.roomId)
+        const roomRank = req.roomId.toString()[0]
+        let tempRooms = rooms[roomRank] || rooms.other
+        tempRooms.forEach(ws => ws.send(JSON.stringify(res)))
         break
       case 'updateScore':
         console.log('正在进行: uodateScore')
