@@ -6,13 +6,13 @@ module.exports = {
     const arr = [openId]
     query(sql,arr)
       .then(data => {
-        if(data.length > 0)
+        if(data.length > 0) {
           res.json({
               code: 200,
               msg: '登录成功',
               data: data
-          });
-        else
+          })
+        } else {
           const addSql = `insert into userList (open_id, level) value (?, 10)`
           query(addSql,arr)
             .then(data => {
@@ -25,7 +25,8 @@ module.exports = {
             },err => {
               console.log(err)
             })
-        })
+        }
+      })
   },
   userLevelChanged(req, res) {
     const {openId, winFlag} = req.body
