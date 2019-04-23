@@ -53,17 +53,52 @@ wss.broadcast = function broadcast(data) {
   })
 }
 
-const rooms = [
+const rooms = {
+  1: [    // 青铜
     {
         roomId: 10001,
         roomStatus: 0,
-        roomAcoounts: []
+        roomAccounts: []
     }, {
         roomId: 10002,
         roomStatus: 0,
         roomAccoutns: []
     }
-]
+  ],
+  2: [  // 白银
+    {
+      roomId: 20001,
+      roomStatus: 0,
+      roomAccounts: []
+    }, {
+        roomId: 20002,
+        roomStatus: 0,
+        roomAccounts: []
+    }
+  ],
+  3: [  // 黄金
+    {
+      roomId: 30001,
+      roomStatus: 0,
+      roomAccounts: []
+    }, {
+        roomId: 30002,
+        roomStatus: 0,
+        roomAccounts: []
+    }
+  ],
+  other: [  // 其他段位
+    {
+      roomId: 100001,
+      roomStatus: 0,
+      roomAccounts: []
+    }, {
+        roomId: 100002,
+        roomStatus: 0,
+        roomAccounts: []
+    }
+  ],
+}
 const ipPools = {}
 let gamer = 0
 wss.on('connection',(ws, req) => {
@@ -75,21 +110,29 @@ wss.on('connection',(ws, req) => {
     let res
     switch(req.method) {
       case 'waitGame':
-        rooms.forEach(item => {
-            if(item.roomStatus === 1) {
-                item.roomAccounts.push(ws)
-                console.log('正在进行发题')
-                let res= {method: 'gameStart', roomId:item.roomId, data: createWords()}
-                item.roomAccounts.forEach(ws => ws.send(JSON.stringify(res)))
-            }
-        })
-        console.log('正在进行: waitGame')
-        if(++gamer === 2) {
-          console.log('正在进行发题')
-          let res = { method: 'gameStart', data: createWords() }
-          res = JSON.stringify(res)
-          wss.broadcast(res)
+        console.log('当前等级为: ' , req.level)
+        const currentRooms = rooms[req.level / 10] || rooms.other  // 查找到当前段位的所有房间
+        let findRoomFlag = false
+        for(let i = 0; i < currentRooms.length; i++) {
+          if(currentRooms[i].roomStatus === 1) {  // 找到一个正在等待的房间
+            currentRooms[i].roomAccounts.push(ws)
+            console.log('已经准备开始游戏,正在进行发题')
+            let res= {method: 'gameStart', roomId:item.roomId, data: createWords()}
+            currentRooms[i].roomAccounts.forEach(ws => ws.send(JSON.stringify(res)))
+            findRoomFlag = true
+            break
+          }
         }
+        if(!findRoomFlag) { // 如果没找到合适的房间
+          for(let i = 0; i < currentRooms.length; i++) {
+            if(currentRooms[i].roomStatus === 0) {  // 找到一个空的房间
+              currentRooms[i].roomAccounts.push(ws)
+              console.log('正在等待其他人加入')
+              break
+            }
+          }
+        }
+        console.log('正在进行: waitGame')
         break
       case 'killWord':
         console.log('正在进行: killWord')

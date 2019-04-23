@@ -39,13 +39,15 @@ module.exports = {
         } else {
           const addSql = `insert into userList (open_id, level) value (?, 10)`
           query(addSql,arr)
-            .then(data => {
-              console.log(data)
-              res.json({
-                code: 200,
-                msg: '未注册',
-                data
-              })
+            .then(() => {
+              query(sql, arr)
+                .then(data => {
+                  res.json({
+                    code: 200,
+                    msg: '未注册',
+                    data
+                  })
+                })
             },err => {
               console.log(err)
             })
