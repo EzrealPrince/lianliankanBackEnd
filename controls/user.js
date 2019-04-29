@@ -26,7 +26,7 @@ const query = function( sql, values ) {
 module.exports = {
   userRequest(req, res) {
     const openId = req.body.openId
-    const sql = `select * from userList where openId = ?`
+    const sql = `select * from userList where open_id = ?`
     const arr = [openId]
     query(sql,arr)
       .then(data => {
@@ -56,7 +56,7 @@ module.exports = {
   },
   userLevelChanged(req, res) {
     const {openId, winFlag} = req.body
-    const sql = `select * from userList where openId = ?`
+    const sql = `select * from userList where open_id = ?`
     const arr = [openId]
     query(sql,arr)
       .then(data => {
@@ -71,6 +71,6 @@ module.exports = {
           msg: '修改等级成功',
           data: data
         })
-      }) 
+      })
   }
 }

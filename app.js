@@ -58,11 +58,15 @@ const rooms = {
     {
         roomId: 10001,
         roomStatus: 0,
-        roomAccounts: []
+        roomAccounts: [],
+        openIdList: [],
+        userInfoList: []
     }, {
         roomId: 10002,
         roomStatus: 0,
-        roomAccoutns: []
+        roomAccoutns: [],
+        openIdList: [],
+        userInfoList: []
     }
   ],
   2: [  // 白银
@@ -89,11 +93,11 @@ const rooms = {
   ],
   other: [  // 其他段位
     {
-      roomId: 100001,
+      roomId: 90001,
       roomStatus: 0,
       roomAccounts: []
     }, {
-        roomId: 100002,
+        roomId: 90002,
         roomStatus: 0,
         roomAccounts: []
     }
@@ -107,18 +111,22 @@ wss.on('connection',(ws, req) => {
   console.log('新连接进来的ip地址为: ', ip)
   ws.on('message', req => {
     req = JSON.parse(req)
-    let res
+    console.log(req)
+
     switch(req.method) {
       case 'waitGame':
         console.log('当前等级为: ' , req.level)
-        const currentRooms = rooms[req.level / 10] || rooms.other  // 查找到当前段位的所有房间
+        const currentRooms = rooms[parseInt(req.level / 10)] || rooms.other  // 查找到当前段位的所有房间
         let findRoomFlag = false
         for(let i = 0; i < currentRooms.length; i++) {
           if(currentRooms[i].roomStatus === 1) {  // 找到一个正在等待的房间
             currentRooms[i].roomAccounts.push(ws)
+            currentRooms[i].openIdList.push(req.openId)
+            console.log(req.userInfo)
+            currentRooms[i].userInfoList.push(req.userInfo)
             console.log('已经准备开始游戏,正在进行发题')
-            let res= {method: 'gameStart', roomId:currentRooms[i].roomId, data: createWords()}
-            currentRooms[i].roomAccounts.forEach(ws => ws.send(JSON.stringify(res)))
+            let res= {method: 'gameStart', roomId:currentRooms[i].roomId, data: createWords(), openIdList: currentRooms[i].openIdList, userInfo: currentRooms[i].userInfoList}
+            currentRooms[i].roomAccounts.forEach(item => item.send(JSON.stringify(res)))
             findRoomFlag = true
             break
           }
@@ -127,6 +135,9 @@ wss.on('connection',(ws, req) => {
           for(let i = 0; i < currentRooms.length; i++) {
             if(currentRooms[i].roomStatus === 0) {  // 找到一个空的房间
               currentRooms[i].roomAccounts.push(ws)
+              currentRooms[i].userInfoList.push(req.userInfo)
+              currentRooms[i].openIdList.push(req.openId)
+              currentRooms[i].roomStatus = 1
               console.log('正在等待其他人加入')
               break
             }
@@ -137,12 +148,16 @@ wss.on('connection',(ws, req) => {
       case 'killWord':
         console.log('正在进行: killWord','当前房间号为:',req.roomId)
         const roomRank = req.roomId.toString()[0]
-        let tempRooms = rooms[roomRank] || rooms.other
-        tempRooms.forEach(ws => ws.send(JSON.stringify(res)))
+        const tempRooms = rooms[roomRank] || rooms.other
+        console.log(tempRooms)
+        const tempRoom = tempRooms.find(item => item.roomId === req.roomId)
+        console.log('tempRoom = ',tempRoom)
+        tempRoom.roomAccounts.forEach(ws => ws.send(JSON.stringify(req)))
         break
       case 'updateScore':
         console.log('正在进行: uodateScore')
-        wss.broadcast(JSON.stringify(res))
+
+        wss.broadcast(JSON.stringify(req))
         break
       case 'singleGame':
         console.log('正在惊醒: singleGame')

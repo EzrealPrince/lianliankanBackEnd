@@ -22,6 +22,7 @@ function createResult(word) {
     const currentWord = words.pop()
     const singleEn = {
       label: currentWord.meanEn,
+      value: String(parseInt(Math.random()*5)),
       key: realIndex,
       deleteFlag: false
     }
@@ -46,7 +47,7 @@ function isSolved(words) {
 }
 
 module.exports = function createWords() {
-  const wordsIndex = createRandomIndex(global.AllWords.length) 
+  const wordsIndex = createRandomIndex(global.AllWords.length)
   let result = []
   wordsIndex.forEach((item) => {
     const word = {}
