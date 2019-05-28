@@ -6,6 +6,7 @@ const http = require('http')
 const bodyParser = require('body-parser')
 const router = require('./router')
 const createWords = require('./utils/createWords')
+const bookClass = require('./constant/courseClass')
 app.use(bodyParser.json())
 app.use(router)
 
@@ -32,7 +33,7 @@ app.post('/login', (req, res) => {
 
 fs.readFile('./success.json', 'utf8', (err, data) => {
   if (err) throw err
-  global.AllWords = JSON.parse(data).book[0].AllWord
+  global.allBooks = JSON.parse(data)
 })
 const options = {
   key: fs.readFileSync('./keys/ezreal-key.pem'),
@@ -53,79 +54,88 @@ wss.broadcast = function broadcast(data) {
   })
 }
 
-const rooms = {
-  1: [    // 青铜
-    {
-        roomId: 10001,
-        roomStatus: 0,
-        roomAccounts: [],
-        openIdList: [],
-        userInfoList: []
-    }, {
-        roomId: 10002,
-        roomStatus: 0,
-        roomAccoutns: [],
-        openIdList: [],
-        userInfoList: []
+const rooms = { }
+for(let i = 0; i < 10;i++) {
+    rooms[i] = []
+    let initRoomId = i * 10000
+    for(let j = 0; j < 20; j++) {
+        let single  = {
+            roomId: initRoomId + j,
+            roomStatus: 0,
+            roomAccounts: [],
+            userInfoList: []
+        }
+        rooms[i].push(single)
     }
-  ],
-  2: [  // 白银
-    {
-      roomId: 20001,
-      roomStatus: 0,
-      roomAccounts: []
-    }, {
-        roomId: 20002,
-        roomStatus: 0,
-        roomAccounts: []
-    }
-  ],
-  3: [  // 黄金
-    {
-      roomId: 30001,
-      roomStatus: 0,
-      roomAccounts: []
-    }, {
-        roomId: 30002,
-        roomStatus: 0,
-        roomAccounts: []
-    }
-  ],
-  other: [  // 其他段位
-    {
-      roomId: 90001,
-      roomStatus: 0,
-      roomAccounts: []
-    }, {
-        roomId: 90002,
-        roomStatus: 0,
-        roomAccounts: []
-    }
-  ],
 }
-const ipPools = {}
-let gamer = 0
 wss.on('connection',(ws, req) => {
   // 获取IP地址
   const ip = req.connection.remoteAddress
   console.log('新连接进来的ip地址为: ', ip)
   ws.on('message', req => {
     req = JSON.parse(req)
-    console.log(req)
-
+    let roomRank,tempRooms,tempRoom,roomId,dataWord,res,currentRooms
     switch(req.method) {
+      case 'waitGameFriend':
+          console.log('好友对战等待中')
+          currentRooms = rooms[9]
+          for(let i = 0; i < currentRooms.length; i++) {
+              if(currentRooms[i].roomStatus === 0) {
+                  currentRooms[i].roomAccounts.push(ws)
+                  currentRooms[i].userInfoList.push(req.userInfo)
+                  currentRooms[i].roomStatus = 1
+                  tempRoom = currentRooms[i]
+                  break
+              }
+          }
+          res = {
+              method: 'waitGameFriend',
+              roomId: tempRoom.roomId
+          }
+          ws.send(JSON.stringify(res))
+          break
+      case 'friendGameStart':
+          tempRooms = rooms[9]
+          tempRoom = tempRooms.find(item => item.roomId == req.roomId)
+          dataWord = createWords(req.bookId)
+          res = {
+              method: 'friendGameStart',
+              data: dataWord
+          }
+         tempRoom.roomAccounts.forEach(item => item.send(JSON.stringify(res)))
+         break
+      case 'friendJoin':
+          console.log('好友对战roomId = ',req.roomId)
+          tempRooms = rooms[9]
+          console.log(tempRooms)
+          tempRoom = tempRooms.find(item => item.roomId == req.roomId)
+          console.log('tempRoom = ',tempRoom)
+          tempRoom.roomStatus = 2
+          tempRoom.roomAccounts.push(ws)
+          tempRoom.userInfoList.push(req.userInfo)
+          res = {
+              method: 'friendJoin',
+              userInfo: tempRoom.userInfoList
+
+          }
+          tempRoom.roomAccounts.forEach(item => item.send(JSON.stringify(res)))
+          break
       case 'waitGame':
         console.log('当前等级为: ' , req.level)
-        const currentRooms = rooms[parseInt(req.level / 10)] || rooms.other  // 查找到当前段位的所有房间
+        currentRooms = rooms[parseInt(req.level / 10)] || rooms[8]  // 查找到当前段位的所有房间
         let findRoomFlag = false
         for(let i = 0; i < currentRooms.length; i++) {
           if(currentRooms[i].roomStatus === 1) {  // 找到一个正在等待的房间
             currentRooms[i].roomAccounts.push(ws)
-            currentRooms[i].openIdList.push(req.openId)
             console.log(req.userInfo)
             currentRooms[i].userInfoList.push(req.userInfo)
+            currentRooms[i].roomStatus = 2
             console.log('已经准备开始游戏,正在进行发题')
-            let res= {method: 'gameStart', roomId:currentRooms[i].roomId, data: createWords(), openIdList: currentRooms[i].openIdList, userInfo: currentRooms[i].userInfoList}
+            dataWord
+            let books = bookClass[parseInt(req.level / 20)].content || bookClass[4]
+            let randomIndex = parseInt(books.length * Math.random())
+            dataWord = createWords(books[randomIndex].bookId)
+            res= {method: 'gameStart', roomId:currentRooms[i].roomId, data: dataWord, userInfo: currentRooms[i].userInfoList}
             currentRooms[i].roomAccounts.forEach(item => item.send(JSON.stringify(res)))
             findRoomFlag = true
             break
@@ -136,7 +146,6 @@ wss.on('connection',(ws, req) => {
             if(currentRooms[i].roomStatus === 0) {  // 找到一个空的房间
               currentRooms[i].roomAccounts.push(ws)
               currentRooms[i].userInfoList.push(req.userInfo)
-              currentRooms[i].openIdList.push(req.openId)
               currentRooms[i].roomStatus = 1
               console.log('正在等待其他人加入')
               break
@@ -147,16 +156,15 @@ wss.on('connection',(ws, req) => {
         break
       case 'killWord':
         console.log('正在进行: killWord','当前房间号为:',req.roomId)
-        const roomRank = req.roomId.toString()[0]
-        const tempRooms = rooms[roomRank] || rooms.other
+        roomRank = req.roomId.toString()[0]
+        tempRooms = rooms[roomRank] || rooms[8]
         console.log(tempRooms)
-        const tempRoom = tempRooms.find(item => item.roomId === req.roomId)
+        tempRoom = tempRooms.find(item => item.roomId === req.roomId)
         console.log('tempRoom = ',tempRoom)
         tempRoom.roomAccounts.forEach(ws => ws.send(JSON.stringify(req)))
         break
       case 'updateScore':
         console.log('正在进行: uodateScore')
-
         wss.broadcast(JSON.stringify(req))
         break
       case 'singleGame':
@@ -165,9 +173,21 @@ wss.on('connection',(ws, req) => {
         wss.send(JSON.stringify(res))
         break
       case 'gameOver':
-        gamer = 0
-        res = { method: 'gameOver', score: {} }
-        res = JSON.stringify(res)
+        roomId = req.roomId
+        roomRank = req.roomId.toString()[0]
+        tempRooms = rooms[roomRank] || rooms[8]
+        tempRoom = tempRooms.find(item => item.roomId === req.roomId)
+        tempRoom.roomAccounts.forEach(ws => ws.send(JSON.stringify(req)))
+        for(let i = 0; i < tempRooms.length;i++) {
+          if(tempRooms[i].roomId === roomId) {
+            tempRooms[i] = {
+              roomId: roomId,
+              roomStatus: 0,
+              roomAccounts: [],
+              userInfoList: []
+            }
+          }
+        }
         break
       default:
         break

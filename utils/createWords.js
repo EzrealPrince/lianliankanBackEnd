@@ -6,6 +6,7 @@ function createRandomIndex(len) {
     let index = ~~(Math.random() * len)
     result.includes(index) ? '' : result.push(index)
   }
+  console.log(result)
   return result
 }
 
@@ -23,13 +24,13 @@ function createResult(word) {
     const singleEn = {
       label: currentWord.meanEn,
       value: String(parseInt(Math.random()*5)),
-      key: realIndex,
+      key: currentWord.wordId,
       deleteFlag: false
     }
     result[realIndex] = singleEn
     const singleCn = {
       label: currentWord.meanCn,
-      key: realIndex,
+      key: currentWord.wordId,
       deleteFlag: false
     }
     result[allIndex.splice(~~(Math.random() * allIndex.length),1)[0]] = singleCn
@@ -46,13 +47,17 @@ function isSolved(words) {
   return judge.isClearable(matrix)
 }
 
-module.exports = function createWords() {
-  const wordsIndex = createRandomIndex(global.AllWords.length)
+module.exports = function createWords(bookId) {
+  const allWords = global.allBooks.find(item => item.bookId === bookId).AllWord
+  console.log(allWords.length)
+  const wordsIndex = createRandomIndex(allWords.length)
   let result = []
+  console.log(wordsIndex)
   wordsIndex.forEach((item) => {
     const word = {}
-    word.meanCn = global.AllWords[item].mean_cn
-    word.meanEn = global.AllWords[item].word
+    word.meanCn = allWords[item].meanCn
+    word.meanEn = allWords[item].word
+    word.wordId = allWords[item].wordId
     result.push(word)
   })
   // console.log(isSolved(createResult(result)))
